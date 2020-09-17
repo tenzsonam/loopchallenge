@@ -48,7 +48,7 @@ I2S_HandleTypeDef hi2s3;
 SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
-uint16_t tDelay = 200;
+uint16_t tDelay = 1000;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -112,6 +112,11 @@ int main(void)
     MX_USB_HOST_Process();
 
     /* USER CODE BEGIN 3 */
+    if (HAL_GPIO_ReadPin(LD6_GPIO_Port, LD6_Pin)) {
+    		HAL_Delay(tDelay);
+    		HAL_GPIO_WritePin (LD6_GPIO_Port, LD6_Pin, GPIO_PIN_RESET);
+    		tDelay = tDelay + 1000;
+        }
   }
   /* USER CODE END 3 */
 }
@@ -370,14 +375,10 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-	void HAL_GPIO_EXTI_Callback ( uint16_t GPIO_Pin )
+void HAL_GPIO_EXTI_Callback ( uint16_t GPIO_Pin )
 	{
 		if (GPIO_Pin == B1_Pin) {
-			HAL_GPIO_WritePin (LD6_GPIO_Port, LD6_Pin, GPIO_PIN_SET);
-			HAL_Delay (tDelay);
-			HAL_GPIO_WritePin (LD6_GPIO_Port, LD6_Pin, GPIO_PIN_RESET);
-			HAL_Delay (200);
-			tDelay = tDelay + 200;
+	 		HAL_GPIO_WritePin (LD6_GPIO_Port, LD6_Pin, GPIO_PIN_SET);
 		}
 	}
 /* USER CODE END 4 */
