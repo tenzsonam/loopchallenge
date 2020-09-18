@@ -20,6 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "usb_host.h"
+#include "stdio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -48,7 +49,8 @@ I2S_HandleTypeDef hi2s3;
 SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
-uint16_t tDelay = 1000;
+uint16_t tDelay1 = 1000; /* Blue LED has 1000ms delay */
+uint16_t tDelay2 = 2000; /* Red LED has 2000ms delay */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,6 +60,7 @@ static void MX_I2C1_Init(void);
 static void MX_I2S3_Init(void);
 static void MX_SPI1_Init(void);
 void MX_USB_HOST_Process(void);
+
 
 /* USER CODE BEGIN PFP */
 
@@ -92,6 +95,7 @@ int main(void)
 
   /* USER CODE BEGIN SysInit */
 
+
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -102,24 +106,51 @@ int main(void)
   MX_USB_HOST_Init();
   /* USER CODE BEGIN 2 */
 
+
+  SysTick_Config(SystemCoreClock / 1000);  /* gives us a 1 millisecond tick */
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
   while (1)
   {
-    /* USER CODE END WHILE */
-    MX_USB_HOST_Process();
+	    /* USER CODE END WHILE */
+	    MX_USB_HOST_Process();
 
-    /* USER CODE BEGIN 3 */
-    if (HAL_GPIO_ReadPin(LD6_GPIO_Port, LD6_Pin)) {
-    		HAL_Delay(tDelay);
-    		HAL_GPIO_WritePin (LD6_GPIO_Port, LD6_Pin, GPIO_PIN_RESET);
-    		tDelay = tDelay + 1000;
-        }
+
+	    /* USER CODE BEGIN 3 */
+	    if (HAL_GPIO_ReadPin(LD6_GPIO_Port, LD6_Pin)) {
+	    		HAL_Delay(tDelay1);
+	    		HAL_GPIO_WritePin (LD6_GPIO_Port, LD6_Pin, GPIO_PIN_RESET);
+	    		tDelay1 = tDelay1 + 1000;
+	        }
+
+	    if (HAL_GPIO_ReadPin(LD6_GPIO_Port, LD5_Pin)) {
+	    	    HAL_Delay(tDelay2);
+	    	    HAL_GPIO_WritePin (LD6_GPIO_Port, LD5_Pin, GPIO_PIN_RESET);
+	    	    tDelay2 = tDelay2 + 1000;
+	    	}
+
+
   }
   /* USER CODE END 3 */
 }
+
+/*
+void delayMs(int ms)
+{
+	msTicks = 0;
+	while(msTicks < ms);
+}
+
+
+void SysTick_Handler(void){
+	msTicks++;
+}
+
+*/
 
 /**
   * @brief System Clock Configuration
@@ -379,8 +410,10 @@ void HAL_GPIO_EXTI_Callback ( uint16_t GPIO_Pin )
 	{
 		if (GPIO_Pin == B1_Pin) {
 	 		HAL_GPIO_WritePin (LD6_GPIO_Port, LD6_Pin, GPIO_PIN_SET);
+	 		HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin, GPIO_PIN_SET);
 		}
 	}
+
 /* USER CODE END 4 */
 
 /**
