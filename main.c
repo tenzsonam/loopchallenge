@@ -114,11 +114,16 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
+
+  /* There may be a way to do this logically different, so that we don't have
+  	     * the two separate if statements causing this lag (LD5 running only AFTER LD6).
+  	     * However, we could keep this the same and instead just account for this lag
+  	     * by subtracting as needed from our tDelay values. This is a design choice */
+
   while (1)
   {
 	    /* USER CODE END WHILE */
 	    MX_USB_HOST_Process();
-
 
 	    /* USER CODE BEGIN 3 */
 	    if (HAL_GPIO_ReadPin(LD6_GPIO_Port, LD6_Pin)) {
@@ -129,7 +134,7 @@ int main(void)
 
 	    if (HAL_GPIO_ReadPin(LD6_GPIO_Port, LD5_Pin)) {
 	    	    HAL_Delay(tDelay2);
-	    	    HAL_GPIO_WritePin (LD6_GPIO_Port, LD5_Pin, GPIO_PIN_RESET);
+	    	    HAL_GPIO_WritePin (LD5_GPIO_Port, LD5_Pin, GPIO_PIN_RESET);
 	    	    tDelay2 = tDelay2 + 1000;
 	    	}
 
