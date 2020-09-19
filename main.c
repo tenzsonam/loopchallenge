@@ -20,7 +20,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "usb_host.h"
-#include "stdio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -49,8 +48,7 @@ I2S_HandleTypeDef hi2s3;
 SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
-uint16_t tDelay1 = 1000; /* Blue LED has 1000ms delay */
-uint16_t tDelay2 = 2000; /* Red LED has 2000ms delay */
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -59,8 +57,8 @@ static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_I2S3_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_NVIC_Init(void);
 void MX_USB_HOST_Process(void);
-
 
 /* USER CODE BEGIN PFP */
 
@@ -68,7 +66,12 @@ void MX_USB_HOST_Process(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+volatile uint16_t timerG;
+int N = 10;
+int count = 0;
+int avg;
+int speed=500; //m/s
+int sample[10][2]={0};
 /* USER CODE END 0 */
 
 /**
@@ -92,9 +95,8 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
-
+  SysTick_Config(SystemCoreClock / 1000);
   /* USER CODE BEGIN SysInit */
-
 
   /* USER CODE END SysInit */
 
@@ -104,53 +106,35 @@ int main(void)
   MX_I2S3_Init();
   MX_SPI1_Init();
   MX_USB_HOST_Init();
+
+  /* Initialize interrupts */
+  MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
-
-
-  SysTick_Config(SystemCoreClock / 1000);  /* gives us a 1 millisecond tick */
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
-
   while (1)
   {
-	    /* USER CODE END WHILE */
-	    MX_USB_HOST_Process();
+    /* USER CODE END WHILE */
+    MX_USB_HOST_Process();
+    /*if (HAL_GPIO_ReadPin(GPIOA, GPIO_Pin_0)) {
 
-	    /* USER CODE BEGIN 3 */
-	    if (HAL_GPIO_ReadPin(LD6_GPIO_Port, LD6_Pin)) {
-	    		HAL_Delay(tDelay1);
-	    		HAL_GPIO_WritePin (LD6_GPIO_Port, LD6_Pin, GPIO_PIN_RESET);
-	    		tDelay1 = tDelay1 + 1000;
-	        }
+        }*/
+    int i, tot=0;
+    for(i=0;i<N;i++){
+    	tot=tot+sample[i][2];
+    }
+    avg = tot/N;
+    if(avg>=speed){
+    	HAL_GPIO_WritePin(LD6_GPIO_Port, LD6_Pin, GPIO_PIN_SET);
+    }
 
-	    if (HAL_GPIO_ReadPin(LD6_GPIO_Port, LD5_Pin)) {
-	    	    HAL_Delay(tDelay2 + 1000 -tDelay1);
-	    	    HAL_GPIO_WritePin (LD5_GPIO_Port, LD5_Pin, GPIO_PIN_RESET);
-	    	    tDelay2 = tDelay2 + 1000;
-	    	}
-
-
+    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
-
-/*
-void delayMs(int ms)
-{
-	msTicks = 0;
-	while(msTicks < ms);
-}
-
-
-void SysTick_Handler(void){
-	msTicks++;
-}
-
-*/
 
 /**
   * @brief System Clock Configuration
@@ -201,6 +185,17 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief NVIC Configuration.
+  * @retval None
+  */
+static void MX_NVIC_Init(void)
+{
+  /* PVD_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(PVD_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(PVD_IRQn);
 }
 
 /**
@@ -360,7 +355,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
@@ -406,13 +401,28 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
 void HAL_GPIO_EXTI_Callback ( uint16_t GPIO_Pin )
-	{
-		if (GPIO_Pin == B1_Pin) {
-	 		HAL_GPIO_WritePin (LD6_GPIO_Port, LD6_Pin, GPIO_PIN_SET);
-	 		HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin, GPIO_PIN_SET);
+{
+	if (GPIO_Pin == B1_Pin) {
+		if(count<N){
+			if(sample[2][1]!=0){
+				sample[count][2]= timerG-sample[count-1][1]	;
+			}
+			else{
+				sample[count][2]= timerG;
+			}
+			sample[count][1]= timerG;
+			count++;
 		}
+		else if(count>=N){
+			count =0;
+			sample[count][1]= timerG;
+			sample[count][2]= timerG-sample[count-1][1];
+		}
+		//HAL_GPIO_WritePin (LD6_GPIO_Port, LD6_Pin, GPIO_PIN_SET);
 	}
+}
 
 /* USER CODE END 4 */
 
