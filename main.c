@@ -67,11 +67,15 @@ void MX_USB_HOST_Process(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 volatile uint16_t timerG;
+int time;
+int i;
 int N = 10;
-int count = 0;
-int avg;
-int speed=500; //m/s
-int sample[10][2]={0};
+int sample[10]; /* could allocate memory for N-size array but not necessary since our N is fixed*/
+int running_avg;
+int total_delay;
+int speed=1000; //m/s
+
+
 /* USER CODE END 0 */
 
 /**
@@ -109,31 +113,28 @@ int main(void)
 
   /* Initialize interrupts */
   MX_NVIC_Init();
-  /* USER CODE BEGIN 2 */
 
-  /* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
-    MX_USB_HOST_Process();
-    /*if (HAL_GPIO_ReadPin(GPIOA, GPIO_Pin_0)) {
 
-        }*/
+    MX_USB_HOST_Process();
+
+    /*
     int i, tot=0;
     for(i=0;i<N;i++){
     	tot=tot+sample[i][2];
     }
     avg = tot/N;
-    if(avg>=speed){
-    	HAL_GPIO_WritePin(LD6_GPIO_Port, LD6_Pin, GPIO_PIN_SET);
-    }
+    */
 
-    /* USER CODE BEGIN 3 */
+    /* if user clicks faster than the speed threshold, light up the LED*/
+    if(running_avg < speed)
+    	HAL_GPIO_WritePin(LD6_GPIO_Port, LD6_Pin, GPIO_PIN_SET);
+    /* perhaps there should be a delay here after pin turns on, otherwise blink disappears too
+     * quickly to be seen?*/
+
   }
-  /* USER CODE END 3 */
 }
 
 /**
@@ -400,28 +401,48 @@ static void MX_GPIO_Init(void)
 
 }
 
+
+
+
 /* USER CODE BEGIN 4 */
 
 void HAL_GPIO_EXTI_Callback ( uint16_t GPIO_Pin )
 {
+
+	/* immediately getting the time at which this interrupt executes will help eliminate time
+	 * delays between when each of the following commands are executed, assuming that these
+	 * commands will run with non-negligible time delays between them. */
+	time = timerG;
+
 	if (GPIO_Pin == B1_Pin) {
-		if(count<N){
-			if(sample[2][1]!=0){
-				sample[count][2]= timerG-sample[count-1][1]	;
-			}
-			else{
-				sample[count][2]= timerG;
-			}
-			sample[count][1]= timerG;
-			count++;
+
+		/* store each of the first N times for when the button is clicked */
+		if (timerG < N){
+			sample[i] = timerG;
+			i++;
 		}
-		else if(count>=N){
-			count =0;
-			sample[count][1]= timerG;
-			sample[count][2]= timerG-sample[count-1][1];
+
+
+		/* we now have exceeded N clicks */
+		else if (timerG >= N){
+
+			/* Now that we have at least N instances to work with, we compute a total for the
+			 * delays between them.*/
+
+			for (i=0; i < N - 1; i++){
+				total_delay = sample[i+1] - sample[i];
+			}
+
+			/* compute the average using the most recent button time (in other words, just
+			 * compute the running average) */
+			running_avg = (total_delay + ((sample[0] - sample[1])))/(N-1);
+
+			/* store the most recent time in the last element of the "sample" array for easy
+			 * access to compute the next delay (between last time and latest) to factor into
+			 * the rolling average */
+			sample[N-1] = time;
+
 		}
-		//HAL_GPIO_WritePin (LD6_GPIO_Port, LD6_Pin, GPIO_PIN_SET);
-	}
 }
 
 /* USER CODE END 4 */
